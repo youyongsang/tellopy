@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tello Drone Scanner with Google Gemini</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .header img {
+            width: 32px;
+            height: 32px;
+        }
+        .video-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .upload-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        #analysis {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            display: none;
+        }
+        .drone-controls {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .chat-section {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .ai-message {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        .ai-command-section {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .ai-command-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .ai-command-input input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .ai-command-history {
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .command-message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .command-request {
+            background-color: #e3f2fd;
+            margin-left: 20%;
+        }
+        .command-response {
+            background-color: #f5f5f5;
+            margin-right: 20%;
+        }
+        .command-help {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .command-help h3 {
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .command-help button {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px 10px;
+            color: #4285f4;
+        }
+        
+        .command-category {
+            margin: 10px 0;
+        }
+        
+        .category-header {
+            cursor: pointer;
+            color: #4285f4;
+            margin: 10px 0;
+            padding: 5px;
+            background-color: #e8f0fe;
+            border-radius: 3px;
+        }
+        
+        .command-examples {
+            padding: 0 15px;
+        }
+        
+        .command-examples ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        
+        .command-examples li {
+            cursor: pointer;
+            padding: 5px;
+            margin: 3px 0;
+            color: #666;
+            border-radius: 3px;
+        }
+        
+        .command-examples li:hover {
+            background-color: #e8f0fe;
+            color: #4285f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a690345.svg" alt="Gemini Logo">
+            <h1>Tello Drone Scanner with Google Gemini</h1>
+        </div>
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" width="640" height="480">
+        </div>
+        <div class="ai-command-section">
+            <h2>AI 드론 제어</h2>
+            <div class="command-help">
+                <h3>명령어 도움말 <button onclick="toggleCommandHelp()" id="helpToggleBtn">▼</button></h3>
+                <div id="commandHelpContent" style="display: none;">
+                    <div class="command-category">
+                        <h4 onclick="toggleCategory('basic')" class="category-header">기본 제어 ▼</h4>
+                        <div id="basicCommands" class="command-examples">
+                            <p><strong>이륙/착륙:</strong></p>
+                            <ul>
+                                <li onclick="setCommand(this)">이륙해줘</li>
+                                <li onclick="setCommand(this)">착륙해줘</li>
+                            </ul>
+                            <p><strong>이동 제어:</strong></p>
+                            <ul>
+                                <li onclick="setCommand(this)">앞으로 30cm 이동해줘</li>
+                                <li onclick="setCommand(this)">위로 50cm 올라가서 한 바퀴 돌아줘</li>
+                                <li onclick="setCommand(this)">왼쪽으로 20cm 이동하고 오른쪽으로 90도 회전해줘</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="command-category">
+                        <h4 onclick="toggleCategory('search')" class="category-header">사람 찾기 ▼</h4>
+                        <div id="searchCommands" class="command-examples">
+                            <p><strong>상태 감지:</strong></p>
+                            <ul>
+                                <li onclick="setCommand(this)">주변에 쓰러진 사람이 있는지 찾아줘</li>
+                                <li onclick="setCommand(this)">다친 사람을 찾아서 상태를 알려줘</li>
+                                <li onclick="setCommand(this)">누워있는 사람이 있는지 확인해줘</li>
+                            </ul>
+                            <p><strong>복합 명령:</strong></p>
+                            <ul>
+                                <li onclick="setCommand(this)">이륙해서 주변에 다친 사람이 있는지 찾아줘</li>
+                                <li onclick="setCommand(this)">1미터 높이로 올라가서 사람을 찾아줘</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ai-command-history" id="commandHistory"></div>
+            <div class="ai-command-input">
+                <input type="text" id="aiCommandInput" placeholder="드론 제어 명령을 입력하세요... (도움말 버튼을 클릭하여 예시 확인)" onkeypress="if(event.key === 'Enter') sendAiCommand()">
+                <button onclick="sendAiCommand()">명령 전송</button>
+            </div>
+        </div>
+        <div class="controls">
+            <button onclick="connectDrone()">드론 연결</button>
+            <button onclick="scanSurroundings()">주변 스캔 (Gemini Vision)</button>
+            <button onclick="createPanorama()">파노라마 촬영</button>
+            <button onclick="processImage()">윤곽선 검출</button>
+            <button onclick="startVoiceRecognition()" id="voiceButton">음성 명령 시작</button>
+            <button onclick="toggleTracking()" id="trackingButton">추적 모드 시작</button>
+        </div>
+        <div class="upload-section">
+            <h2>이미지 업로드 및 분석</h2>
+            <div class="upload-form">
+                <input type="file" id="imageFile" accept="image/*" onchange="previewImage(event)">
+                <button onclick="analyzeUploadedImage()">이미지 분석</button>
+            </div>
+            <img id="preview" class="preview-image" alt="미리보기">
+        </div>
+        <div id="status"></div>
+        <div id="analysis"></div>
+        <div id="processed-image" style="margin: 20px 0; text-align: center;">
+            <img id="contour-result" style="max-width: 100%; display: none;" alt="윤곽선 검출 결과">
+        </div>
+        <div class="chat-section">
+            <h2>GPT-4 AI 어시스턴트</h2>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="드론에 대해 궁금한 점을 물어보세요..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button onclick="sendMessage()">전송</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'error' : 'success';
+        }
+
+        function updateAnalysis(text) {
+            const analysisDiv = document.getElementById('analysis');
+            analysisDiv.textContent = text;
+        }
+
+        function previewImage(event) {
+            const preview = document.getElementById('preview');
+            const file = event.target.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        async function connectDrone() {
+            try {
+                updateStatus("드론 연결 중...");
+                const response = await fetch('/connect', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+            } catch (error) {
+                updateStatus('연결 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function scanSurroundings() {
+            try {
+                updateStatus("주변 스캔 중...");
+                const response = await fetch('/scan', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+                if (data.analysis) {
+                    updateAnalysis(data.analysis);
+                }
+            } catch (error) {
+                updateStatus('스캔 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function createPanorama() {
+            try {
+                updateStatus("파노라마 촬영 중...");
+                const response = await fetch('/panorama', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+                if (data.analysis) {
+                    updateAnalysis(data.analysis);
+                }
+            } catch (error) {
+                updateStatus('파노라마 촬영 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function analyzeUploadedImage() {
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                updateStatus('파일을 선택해주세요.', true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                updateStatus("이미지 분석 중...");
+                const response = await fetch('/analyze_uploaded', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+                if (data.analysis) {
+                    updateAnalysis(data.analysis);
+                }
+            } catch (error) {
+                updateStatus('이미지 분석 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function processImage() {
+            try {
+                updateStatus("이미지 처리 중...");
+                const response = await fetch('/process_image', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+                
+                if (data.status === 'success' && data.image_url) {
+                    const resultImage = document.getElementById('contour-result');
+                    resultImage.src = data.image_url;
+                    resultImage.style.display = 'block';
+                }
+            } catch (error) {
+                updateStatus('이미지 처리 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        let isListening = false;
+        let recognition = null;
+
+        function startVoiceRecognition() {
+            const voiceButton = document.getElementById('voiceButton');
+            
+            if (!isListening) {
+                if (!recognition) {
+                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.lang = 'ko-KR';
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+
+                    recognition.onresult = function(event) {
+                        const text = event.results[0][0].transcript;
+                        updateStatus(`인식된 명령: ${text}`);
+                        
+                        // 음성 명령을 AI 명령으로 전달
+                        sendAiCommand(text);
+                    };
+
+                    recognition.onerror = function(event) {
+                        updateStatus('음성 인식 오류: ' + event.error, true);
+                        voiceButton.textContent = '음성 명령 시작';
+                        isListening = false;
+                    };
+
+                    recognition.onend = function() {
+                        voiceButton.textContent = '음성 명령 시작';
+                        isListening = false;
+                    };
+                }
+
+                recognition.start();
+                voiceButton.textContent = '음성 인식 중...';
+                isListening = true;
+                updateStatus('음성 명령을 말씀해주세요...');
+            } else {
+                recognition.stop();
+                voiceButton.textContent = '음성 명령 시작';
+                isListening = false;
+                updateStatus('음성 인식이 중지되었습니다.');
+            }
+        }
+
+        async function toggleTracking() {
+            try {
+                const trackingButton = document.getElementById('trackingButton');
+                updateStatus("추적 모드 전환 중...");
+                const response = await fetch('/toggle_tracking', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                updateStatus(data.message, data.status === 'error');
+                
+                if (data.status === 'success') {
+                    trackingButton.textContent = data.tracking_enabled ? '추적 모드 중지' : '추적 모드 시작';
+                }
+            } catch (error) {
+                updateStatus('추적 모드 전환 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user-message';
+            userMessageDiv.textContent = message;
+            chatMessages.appendChild(userMessageDiv);
+            
+            input.value = '';
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const aiMessageDiv = document.createElement('div');
+                    aiMessageDiv.className = 'message ai-message';
+                    aiMessageDiv.textContent = data.reply;
+                    chatMessages.appendChild(aiMessageDiv);
+                } else {
+                    updateStatus(data.message, true);
+                }
+                
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+            } catch (error) {
+                updateStatus('메시지 전송 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        async function sendAiCommand(command = null) {
+            const input = document.getElementById('aiCommandInput');
+            const commandText = command || input.value.trim();
+            
+            if (!commandText) return;
+            
+            const commandHistory = document.getElementById('commandHistory');
+            const requestDiv = document.createElement('div');
+            requestDiv.className = 'command-message command-request';
+            requestDiv.textContent = commandText;
+            commandHistory.appendChild(requestDiv);
+            
+            if (!command) {
+                input.value = '';
+            }
+            
+            try {
+                const response = await fetch('/ai_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ command: commandText })
+                });
+                
+                const data = await response.json();
+                
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'command-message command-response';
+                responseDiv.textContent = data.status === 'success' ? data.response : data.message;
+                commandHistory.appendChild(responseDiv);
+                
+                commandHistory.scrollTop = commandHistory.scrollHeight;
+                
+                if (data.status === 'error') {
+                    updateStatus(data.message, true);
+                }
+            } catch (error) {
+                updateStatus('명령 전송 중 오류가 발생했습니다: ' + error, true);
+            }
+        }
+
+        function toggleCommandHelp() {
+            const content = document.getElementById('commandHelpContent');
+            const btn = document.getElementById('helpToggleBtn');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                btn.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                btn.textContent = '▼';
+            }
+        }
+
+        function toggleCategory(categoryId) {
+            const content = document.getElementById(categoryId + 'Commands');
+            const header = content.previousElementSibling;
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                header.textContent = header.textContent.replace('▼', '▲');
+            } else {
+                content.style.display = 'none';
+                header.textContent = header.textContent.replace('▲', '▼');
+            }
+        }
+
+        function setCommand(element) {
+            const input = document.getElementById('aiCommandInput');
+            input.value = element.textContent;
+            input.focus();
+        }
+    </script>
+</body>
+</html> 
